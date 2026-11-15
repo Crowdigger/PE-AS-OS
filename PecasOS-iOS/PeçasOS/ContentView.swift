@@ -40,6 +40,34 @@ struct ContentView: View {
                                 .font(.system(size: 20)).foregroundStyle(Metro.blue)
                         }
                         .accessibilityLabel(darkMode ? "Ativar tema claro" : "Ativar tema escuro")
+                        Menu {
+                            Button {
+                                do {
+                                    backupDocument = BackupDocument(data: try store.makeBackup())
+                                    exportBackup = true
+                                } catch {
+                                    feedback = "Não foi possível preparar o backup: \(error.localizedDescription)"
+                                }
+                            } label: {
+                                Label("Salvar backup", systemImage: "square.and.arrow.up")
+                            }
+                            Button {
+                                importBackup = true
+                            } label: {
+                                Label("Restaurar backup", systemImage: "square.and.arrow.down")
+                            }
+                            Divider()
+                            Button(lastManualBackup == 0
+                                   ? "Nenhum backup realizado"
+                                   : "Último backup: \(Date(timeIntervalSince1970: lastManualBackup).brazilianDateTime)") {}
+                                .disabled(true)
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.system(size: 24))
+                                .foregroundStyle(Metro.blue)
+                                .frame(width: 44, height: 44)
+                        }
+                        .accessibilityLabel("Menu: backup e restauração")
                     }
                     HStack(spacing: 8) {
                         MetroTile(title: "NOVA PEÇA", symbol: "plus", color: Metro.blue) { showNew = true }
@@ -60,7 +88,6 @@ struct ContentView: View {
                         .background(darkMode ? Metro.darkSurface : .white)
                         .clipShape(RoundedRectangle(cornerRadius: 3))
                     }
-                    backupSection
                     if filtered.isEmpty {
                         ContentUnavailableView("Nenhum cadastro encontrado", systemImage: "shippingbox",
                                                description: Text("Cadastre uma peça ou tente outra busca."))
@@ -84,7 +111,7 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showNew) { PieceFormView(existing: nil) }
             .sheet(item: $editRecord) { PieceFormView(existing: $0) }
-            .fileExporter(isPresented: $exportBackup, document: $backupDocument,
+            .fileExporter(isPresented: $exportBackup, document: backupDocument,
                           contentType: .zip,
                           defaultFilename: "PecasOS-\(Date().formatted(.iso8601.year().month().day()))") { result in
                 switch result {
@@ -142,40 +169,6 @@ struct ContentView: View {
         }
         .tint(Metro.blue)
         .preferredColorScheme(darkMode ? .dark : .light)
-    }
-
-    private var backupSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("BACKUP E RESTAURAÇÃO")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(Metro.blue)
-            Text("Manual · iCloud Drive ou No Meu iPhone")
-                .font(.system(size: 12)).foregroundStyle(.secondary)
-            Text(lastManualBackup == 0 ? "Nenhum backup realizado" :
-                 "Último backup: \(Date(timeIntervalSince1970: lastManualBackup).brazilianDateTime)")
-                .font(.system(size: 12)).foregroundStyle(.secondary)
-            HStack(spacing: 7) {
-                Button {
-                    do { backupDocument = BackupDocument(data: try store.makeBackup()); exportBackup = true }
-                    catch { feedback = "Não foi possível preparar o backup: \(error.localizedDescription)" }
-                } label: {
-                    Label("Salvar backup", systemImage: "square.and.arrow.up")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 46)
-                        .foregroundStyle(.white).background(Metro.blue)
-                }
-                Button { importBackup = true } label: {
-                    Label("Restaurar", systemImage: "square.and.arrow.down")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 46)
-                        .foregroundStyle(.white).background(Metro.green)
-                }
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(darkMode ? Metro.darkSurface : .white)
     }
 
     private func pieceCard(_ record: PieceRecord) -> some View {
